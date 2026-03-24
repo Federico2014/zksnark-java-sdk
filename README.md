@@ -41,7 +41,7 @@ git submodule update --init --recursive
 
 **Linux / macOS (Intel):**
 
-```bas
+```bash
 cd cpp && mkdir build && cd build
 cmake ..
 make -j4
@@ -191,7 +191,7 @@ Tests cover:
 
 ## Project Structure
 
-```
+```text
 zksnark-java-sdk/
 ├── src/main/java/          # Java JNI wrappers
 │   └── org/tron/common/zksnark/

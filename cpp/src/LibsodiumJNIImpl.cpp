@@ -7,13 +7,6 @@
 #include <cstring>
 #include <new>
 
-// Helper macro to check for pending JNI exceptions and clear them
-#define CHECK_JNI_EXCEPTION(env) \
-    if (env->ExceptionCheck()) { \
-        env->ExceptionClear(); \
-        return -1; \
-    }
-
 JNIEXPORT jlong JNICALL Java_org_tron_common_zksnark_Libsodium_00024LibsodiumJNI_crypto_1generichash_1blake2b_1state_1init
     (JNIEnv *, jobject) {
     crypto_generichash_blake2b_state* state_p = new (std::nothrow) crypto_generichash_blake2b_state();

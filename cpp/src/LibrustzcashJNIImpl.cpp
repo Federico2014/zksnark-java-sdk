@@ -6,13 +6,6 @@
 #include "librustzcash.h"
 #include <cstring>
 
-// Helper macro to check for pending JNI exceptions and clear them
-#define CHECK_JNI_EXCEPTION(env) \
-    if (env->ExceptionCheck()) { \
-        env->ExceptionClear(); \
-        return JNI_FALSE; \
-    }
-
 jboolean bool2jboolean(bool b) {
     return b ? JNI_TRUE : JNI_FALSE;
 }
@@ -383,7 +376,7 @@ JNIEXPORT jboolean JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librus
  */
 JNIEXPORT jlong JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingProvingCtxInit
   (JNIEnv *, jobject) {
-  return (jlong) librustzcash_sapling_proving_ctx_init();
+  return reinterpret_cast<jlong>(librustzcash_sapling_proving_ctx_init());
 }
 
 /*
@@ -550,7 +543,7 @@ JNIEXPORT jboolean JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librus
  */
 JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingProvingCtxFree
   (JNIEnv *, jobject, jlong ctx) {
-  librustzcash_sapling_proving_ctx_free((void *)ctx);
+  librustzcash_sapling_proving_ctx_free(reinterpret_cast<void*>(ctx));
 }
 
 /*
@@ -786,7 +779,7 @@ JNIEXPORT jboolean JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librus
 JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingVerificationCtxFree
   (JNIEnv *, jobject, jlong ctx) {
 //    void librustzcash_sapling_verification_ctx_free(void *);
-    librustzcash_sapling_verification_ctx_free((void *) ctx);
+    librustzcash_sapling_verification_ctx_free(reinterpret_cast<void*>(ctx));
 }
 
 /*
