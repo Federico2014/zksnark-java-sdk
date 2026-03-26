@@ -52,12 +52,14 @@ make install
 
 ```bash
 cd cpp && mkdir build && cd build
-CC=cc cmake ..
+CC=cc cmake -DCMAKE_OSX_ARCHITECTURES=arm64 ..
 make -j4
 make install
 ```
 
 ### Build the Java Package
+
+Run this from the project root directory:
 
 ```bash
 mvn clean package
@@ -178,6 +180,8 @@ LibrustzcashWrapper.getInstance().librustzcashSaplingVerificationCtxFree(ctx);
 ```
 
 ## Running Tests
+
+Run this from the project root directory:
 
 ```bash
 mvn test
