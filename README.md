@@ -105,15 +105,15 @@ import org.tron.common.zksnark.LibrustzcashWrapper;
 
 // Derive master xsk from seed
 byte[] seed = new byte[32]; // your seed
-byte[] xskMaster = new byte[160];
+byte[] xskMaster = new byte[169];
 LibrustzcashWrapper.getInstance().librustzcashZip32XskMaster(seed, seed.length, xskMaster);
 
 // Derive child xsk at index i
-byte[] xskChild = new byte[160];
+byte[] xskChild = new byte[169];
 LibrustzcashWrapper.getInstance().librustzcashZip32XskDerive(xskMaster, i, xskChild);
 
 // Derive address from xfvk
-byte[] xfvk = new byte[160];
+byte[] xfvk = new byte[169];
 byte[] index = new byte[11];
 byte[] jRet = new byte[11];
 byte[] addr = new byte[43];
@@ -179,6 +179,15 @@ LibrustzcashWrapper.getInstance().librustzcashSaplingVerificationCtxFree(ctx);
 
 ## Running Tests
 
+Rebuild the native library from the matching `rust/librustzcash` submodule source
+before running tests. The checked JNI methods require the rebuilt library; old
+bundled binaries do not provide them. To test without replacing bundled binaries,
+point the loader at the directory containing the rebuilt JNI library:
+
+```bash
+mvn -Dlibrary.zksnarkjni.path=/absolute/path/to/native-library-directory test
+```
+
 ```bash
 mvn test
 ```
@@ -188,6 +197,22 @@ Tests cover:
 - Proof generation and verification
 - Note encryption/decryption
 - Merkle tree operations
+
+### Checked API migration
+
+Use `librustzcashSaplingComputeNfChecked` and check its boolean result before
+consuming the nullifier output. The legacy `void` method remains for binary
+compatibility and cannot report failure. Never infer success from the output
+being nonzero.
+
+`librustzcashZip32XskDeriveChecked` returns false for malformed extended keys or
+depth 255. The legacy `void` derivation method throws `IllegalArgumentException`
+on those inputs. ZIP32 extended keys and their output buffers are exactly 169
+bytes; negative Java child indices retain their unsigned hardened-index meaning.
+
+Release the Rust submodule revision and rebuild native libraries for every
+supported platform together with the Java wrapper. Consumers such as java-tron
+can then update the SDK dependency and adopt the checked nullifier method.
 
 ## Project Structure
 

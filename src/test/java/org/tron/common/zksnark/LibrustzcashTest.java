@@ -230,9 +230,20 @@ public class LibrustzcashTest {
     Assert.assertTrue(LibrustzcashWrapper.getInstance().librustzcashSaplingSpendProof(
         ctx, ak, nsk, d, rcm, alpha, value, anchor, voucherPath, cv, rk, zkproof));
 
+    byte[] savedCv = cv.clone();
+    byte[] savedRk = rk.clone();
+    byte[] savedProof = zkproof.clone();
+    Assert.assertTrue(LibrustzcashWrapper.getInstance().librustzcashSaplingBindingSig(
+        ctx, value, new byte[32], new byte[64]));
+
     nsk = HexBin.decode("e65f967ab3a461b3a90aab555ed4c9b89f5c5cf197c7ee94c06f85fde6ef4107");
     Assert.assertFalse(LibrustzcashWrapper.getInstance().librustzcashSaplingSpendProof(
         ctx, ak, nsk, d, rcm, alpha, value, anchor, voucherPath, cv, rk, zkproof));
+    Assert.assertArrayEquals(savedCv, cv);
+    Assert.assertArrayEquals(savedRk, rk);
+    Assert.assertArrayEquals(savedProof, zkproof);
+    Assert.assertTrue(LibrustzcashWrapper.getInstance().librustzcashSaplingBindingSig(
+        ctx, value, new byte[32], new byte[64]));
 
     for (long val : LONG_ARRAY) {
       ak = randomByte(32);
