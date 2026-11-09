@@ -10,6 +10,10 @@ jboolean bool2jboolean(bool b) {
     return b ? JNI_TRUE : JNI_FALSE;
 }
 
+static bool hasLength(JNIEnv* env, jbyteArray value, jsize length) {
+    return value != nullptr && env->GetArrayLength(value) == length;
+}
+
 /*
  * Matt
  */
@@ -49,6 +53,12 @@ JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librustzca
  */
 JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashZip32XskMaster
   (JNIEnv * env, jobject, jbyteArray seed, jint seedlen, jbyteArray xsk_master) {
+    if (seed == nullptr || seedlen < 0 || seedlen > env->GetArrayLength(seed)
+        || !hasLength(env, xsk_master, 169)) {
+      jclass exception = env->FindClass("java/lang/IllegalArgumentException");
+      if (exception != nullptr) env->ThrowNew(exception, "Invalid ZIP32 seed or output length");
+      return;
+    }
     const jbyte* s = env->GetByteArrayElements(seed, nullptr);
     jbyte* x = env->GetByteArrayElements(xsk_master, nullptr);
     if (s == nullptr || x == nullptr)
@@ -67,8 +77,32 @@ JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librustzca
  * Method:    librustzcashZip32XskDerive
  * Signature: ([BI[B)V
  */
+JNIEXPORT jboolean JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashZip32XskDeriveChecked
+  (JNIEnv * env, jobject, jbyteArray xsk_parent, jint i, jbyteArray xsk_i) {
+    if (!hasLength(env, xsk_parent, 169) || !hasLength(env, xsk_i, 169)) {
+      return JNI_FALSE;
+    }
+    const jbyte* xp = env->GetByteArrayElements(xsk_parent, nullptr);
+    jbyte* xi = env->GetByteArrayElements(xsk_i, nullptr);
+    if (xp == nullptr || xi == nullptr)
+    {
+      if (xp != nullptr) env->ReleaseByteArrayElements(xsk_parent, const_cast<jbyte*>(xp), JNI_ABORT);
+      if (xi != nullptr) env->ReleaseByteArrayElements(xsk_i, xi, JNI_ABORT);
+      return JNI_FALSE;
+    }
+    bool success = librustzcash_zip32_xsk_derive_checked(reinterpret_cast<const unsigned char*>(xp), static_cast<uint32_t>(i), reinterpret_cast<unsigned char*>(xi));
+    env->ReleaseByteArrayElements(xsk_parent, const_cast<jbyte*>(xp), JNI_ABORT);
+    env->ReleaseByteArrayElements(xsk_i, xi, success ? 0 : JNI_ABORT);
+    return bool2jboolean(success);
+}
+
 JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashZip32XskDerive
   (JNIEnv * env, jobject, jbyteArray xsk_parent, jint i, jbyteArray xsk_i) {
+    if (!hasLength(env, xsk_parent, 169) || !hasLength(env, xsk_i, 169)) {
+      jclass exception = env->FindClass("java/lang/IllegalArgumentException");
+      if (exception != nullptr) env->ThrowNew(exception, "Invalid ZIP32 extended key length");
+      return;
+    }
     const jbyte* xp = env->GetByteArrayElements(xsk_parent, nullptr);
     jbyte* xi = env->GetByteArrayElements(xsk_i, nullptr);
     if (xp == nullptr || xi == nullptr)
@@ -89,6 +123,10 @@ JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librustzca
  */
 JNIEXPORT jboolean JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashZip32XfvkAddress
   (JNIEnv * env, jobject, jbyteArray xfvk, jbyteArray j, jbyteArray j_ret, jbyteArray addr_ret) {
+    if (!hasLength(env, xfvk, 169) || !hasLength(env, j, 11)
+        || !hasLength(env, j_ret, 11) || !hasLength(env, addr_ret, 43)) {
+      return JNI_FALSE;
+    }
     const jbyte* x = env->GetByteArrayElements(xfvk, nullptr);
     const jbyte* jPoint = env->GetByteArrayElements(j, nullptr);
     jbyte* jr = env->GetByteArrayElements(j_ret, nullptr);
@@ -138,8 +176,14 @@ JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librustzca
  * Method:    librustzcashSaplingComputeNf
  * Signature: ([B[BJ[B[B[BJ[B)V
  */
-JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingComputeNf
+JNIEXPORT jboolean JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingComputeNfChecked
   (JNIEnv * env, jobject, jbyteArray diversifier, jbyteArray pk_d, jlong value, jbyteArray r, jbyteArray ak, jbyteArray nk, jlong position, jbyteArray result) {
+    if (!hasLength(env, diversifier, 11) || !hasLength(env, pk_d, 32)
+        || !hasLength(env, r, 32) || !hasLength(env, ak, 32)
+        || !hasLength(env, nk, 32) || !hasLength(env, result, 32)
+        || value < 0 || position < 0) {
+      return JNI_FALSE;
+    }
     const jbyte* d = env->GetByteArrayElements(diversifier, nullptr);
     const jbyte* p = env->GetByteArrayElements(pk_d, nullptr);
     const jbyte* rPoint = env->GetByteArrayElements(r, nullptr);
@@ -154,9 +198,9 @@ JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librustzca
       if (a != nullptr) env->ReleaseByteArrayElements(ak, const_cast<jbyte*>(a), JNI_ABORT);
       if (n != nullptr) env->ReleaseByteArrayElements(nk, const_cast<jbyte*>(n), JNI_ABORT);
       if (rs != nullptr) env->ReleaseByteArrayElements(result, rs, JNI_ABORT);
-      return;
+      return JNI_FALSE;
     }
-    librustzcash_sapling_compute_nf(
+    bool success = librustzcash_sapling_compute_nf(
         reinterpret_cast<const unsigned char*>(d),
         reinterpret_cast<const unsigned char*>(p),
         static_cast<uint64_t>(value),
@@ -170,7 +214,14 @@ JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024Librustzca
     env->ReleaseByteArrayElements(r, const_cast<jbyte*>(rPoint), JNI_ABORT);
     env->ReleaseByteArrayElements(ak, const_cast<jbyte*>(a), JNI_ABORT);
     env->ReleaseByteArrayElements(nk, const_cast<jbyte*>(n), JNI_ABORT);
-    env->ReleaseByteArrayElements(result, rs, 0);
+    env->ReleaseByteArrayElements(result, rs, success ? 0 : JNI_ABORT);
+    return bool2jboolean(success);
+}
+
+JNIEXPORT void JNICALL Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingComputeNf
+  (JNIEnv * env, jobject, jbyteArray diversifier, jbyteArray pk_d, jlong value, jbyteArray r, jbyteArray ak, jbyteArray nk, jlong position, jbyteArray result) {
+    Java_org_tron_common_zksnark_Librustzcash_00024LibrustzcashJNI_librustzcashSaplingComputeNfChecked(
+        env, nullptr, diversifier, pk_d, value, r, ak, nk, position, result);
 }
 
 /*

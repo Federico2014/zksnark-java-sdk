@@ -13,7 +13,13 @@ class Librustzcash {
   }
 
   public void librustzcashZip32XskDerive(byte[] xsk_parent, int i, byte[] xsk_i) {
-    INSTANCE.librustzcashZip32XskDerive(xsk_parent, i, xsk_i);
+    if (!librustzcashZip32XskDeriveChecked(xsk_parent, i, xsk_i)) {
+      throw new IllegalArgumentException("Invalid ZIP32 extended spending key");
+    }
+  }
+
+  public boolean librustzcashZip32XskDeriveChecked(byte[] xsk_parent, int i, byte[] xsk_i) {
+    return INSTANCE.librustzcashZip32XskDeriveChecked(xsk_parent, i, xsk_i);
   }
 
   public boolean librustzcashZip32XfvkAddress(byte[] xfvk, byte[] j, byte[] j_ret, byte[] addr_ret) {
@@ -26,7 +32,14 @@ class Librustzcash {
 
   public void librustzcashSaplingComputeNf(byte[] d, byte[] pk_d, long value_, byte[] r, byte[] ak,
       byte[] nk, long position, byte[] result) {
+    // Retain the legacy descriptor; new callers must use the checked API.
     INSTANCE.librustzcashSaplingComputeNf(d, pk_d, value_, r, ak, nk, position, result);
+  }
+
+  public boolean librustzcashSaplingComputeNfChecked(byte[] d, byte[] pk_d, long value_, byte[] r,
+      byte[] ak, byte[] nk, long position, byte[] result) {
+    return INSTANCE.librustzcashSaplingComputeNfChecked(
+        d, pk_d, value_, r, ak, nk, position, result);
   }
 
   public void librustzcashNskToNk(byte[] nsk, byte[] result) {
@@ -163,12 +176,18 @@ class Librustzcash {
 
     private native void librustzcashZip32XskDerive(byte[] xsk_parent, int i, byte[] xsk_i);
 
+    private native boolean librustzcashZip32XskDeriveChecked(
+        byte[] xsk_parent, int i, byte[] xsk_i);
+
     private native  boolean librustzcashZip32XfvkAddress(byte[] xfvk, byte[] j, byte[] j_ret, byte[] addr_ret);
 
     private native void librustzcashAskToAk(byte[] ask, byte[] result);
 
     private native void librustzcashSaplingComputeNf(byte[] d, byte[] pk_d, long value_, byte[] r, byte[] ak,
         byte[] nk, long position, byte[] result);
+
+    private native boolean librustzcashSaplingComputeNfChecked(byte[] d, byte[] pk_d,
+        long value_, byte[] r, byte[] ak, byte[] nk, long position, byte[] result);
 
     private native void librustzcashNskToNk(byte[] nsk, byte[] result);
 

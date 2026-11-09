@@ -13,7 +13,7 @@ final class HexBin {
     for (int i = 0; i < hex.length(); i += 2) {
       int high = Character.digit(hex.charAt(i), 16);
       int low = Character.digit(hex.charAt(i + 1), 16);
-      if (high < 0 || low < 0) {
+      if (hex.charAt(i) > 127 || hex.charAt(i + 1) > 127 || high < 0 || low < 0) {
         throw new IllegalArgumentException("Invalid hex string");
       }
       out[i / 2] = (byte) ((high << 4) + low);

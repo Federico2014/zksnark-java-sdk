@@ -47,6 +47,7 @@
     <forge-project-id>zksnark-java-sdk</forge-project-id>
     <forge-project-id-uc>zksnark-java-sdk</forge-project-id-uc>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <native.resource.directory>${project.basedir}/src/main/resources</native.resource.directory>
     <hawtjni-version>1.18</hawtjni-version>
     <commons-io-version>2.11.0</commons-io-version>
     <junit-version>4.13.2</junit-version>
@@ -119,6 +120,11 @@
     </dependency>
   </dependencies>
   <build>
+    <resources>
+      <resource>
+        <directory>${native.resource.directory}</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

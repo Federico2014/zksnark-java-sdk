@@ -1,5 +1,4 @@
 [submodule "rust/librustzcash"]
 	path = rust/librustzcash
-	url = https://github.com/tronprotocol/librustzcash.git
-	branch = release_vm_zksnarks_4.0
-	ignore=dirty
+	url = https://github.com/Federico2014/librustzcash.git
+	branch = fix/native-boundary-error-handling
