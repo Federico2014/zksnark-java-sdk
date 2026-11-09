@@ -52,12 +52,14 @@ make install
 
 ```bash
 cd cpp && mkdir build && cd build
-CC=cc cmake ..
+CC=cc cmake -DCMAKE_OSX_ARCHITECTURES=arm64 ..
 make -j4
 make install
 ```
 
 ### Build the Java Package
+
+Run this from the project root directory:
 
 ```bash
 mvn clean package
@@ -189,6 +191,8 @@ point the loader at the directory containing the rebuilt JNI library:
 ```bash
 mvn -Dlibrary.zksnarkjni.path=/absolute/path/to/native-library-directory test
 ```
+
+Run this from the project root directory:
 
 ```bash
 mvn test

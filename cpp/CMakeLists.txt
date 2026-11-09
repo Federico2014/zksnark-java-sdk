@@ -26,6 +26,12 @@ if(NOT EXISTS "${JAVA_HOME}/include/jni.h")
 endif()
 
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" NATIVE_PROCESSOR)
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    if(CMAKE_OSX_ARCHITECTURES MATCHES ";")
+        message(FATAL_ERROR "Universal macOS builds are not supported; select a single CMAKE_OSX_ARCHITECTURES value")
+    endif()
+    string(TOLOWER "${CMAKE_OSX_ARCHITECTURES}" NATIVE_PROCESSOR)
+endif()
 if(NATIVE_PROCESSOR MATCHES "^(arm64|aarch64)$")
     set(NATIVE_ARCH aarch64)
 elseif(NATIVE_PROCESSOR MATCHES "^(x86_64|amd64)$")
@@ -38,16 +44,29 @@ set(RUST_BUILD_ENV "CARGO_TARGET_DIR=${CMAKE_BINARY_DIR}/cargo")
 set(SODIUM_BUILD_ENV "CC=${CMAKE_C_COMPILER}" "CFLAGS=-O2 -fPIC")
 set(SODIUM_HOST_ARGS)
 if(APPLE)
+    set(EXPECTED_RUST_TARGET "${NATIVE_ARCH}-apple-darwin")
     set(JNI_OS darwin)
     set(NATIVE_RESOURCE_DIR osx64)
     if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
         set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")
     endif()
     list(APPEND RUST_BUILD_ENV "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
-    list(APPEND SODIUM_BUILD_ENV "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
     # The old release tarball's config.guess does not recognize Apple Silicon.
-    set(SODIUM_HOST_ARGS "--build=${NATIVE_ARCH}-apple-darwin" "--host=${NATIVE_ARCH}-apple-darwin")
+    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" SODIUM_HOST_ARCH)
+    if(SODIUM_HOST_ARCH STREQUAL "arm64")
+        set(SODIUM_HOST_ARCH aarch64)
+    endif()
+    set(SODIUM_HOST_ARGS "--build=${SODIUM_HOST_ARCH}-apple-darwin" "--host=${NATIVE_ARCH}-apple-darwin")
+    if(NATIVE_ARCH STREQUAL "aarch64")
+        set(SODIUM_APPLE_ARCH arm64)
+    else()
+        set(SODIUM_APPLE_ARCH x86_64)
+    endif()
+    set(SODIUM_BUILD_ENV "CC=${CMAKE_C_COMPILER}"
+        "CFLAGS=-O2 -fPIC -arch ${SODIUM_APPLE_ARCH}"
+        "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(EXPECTED_RUST_TARGET "${NATIVE_ARCH}-unknown-linux-gnu")
     set(JNI_OS linux)
     set(NATIVE_RESOURCE_DIR linux64)
 else()
@@ -58,12 +77,20 @@ if(NATIVE_ARCH STREQUAL "aarch64")
 endif()
 
 set(RUST_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/librustzcash")
-set(RUST_LIBRARY "${CMAKE_BINARY_DIR}/cargo/release/librustzcash.a")
+set(RUST_BUILD_TARGET "$ENV{RUST_BUILD_TARGET}" CACHE STRING "Rust target for the JNI library")
+if(NOT RUST_BUILD_TARGET)
+    set(RUST_BUILD_TARGET "${EXPECTED_RUST_TARGET}")
+elseif(NOT RUST_BUILD_TARGET STREQUAL EXPECTED_RUST_TARGET)
+    message(FATAL_ERROR "RUST_BUILD_TARGET must match the JNI architecture: ${EXPECTED_RUST_TARGET}")
+endif()
+message(STATUS "Using Rust target: ${RUST_BUILD_TARGET}")
+set(RUST_LIBRARY "${CMAKE_BINARY_DIR}/cargo/${RUST_BUILD_TARGET}/release/librustzcash.a")
 # Let Cargo check source changes on every build; ExternalProject stamps alone
 # do not notice edits inside a local Rust submodule.
 add_custom_target(rust_build
     COMMAND "${CMAKE_COMMAND}" -E env ${RUST_BUILD_ENV}
         "${CARGO_EXECUTABLE}" build --locked --release --package librustzcash
+        --target "${RUST_BUILD_TARGET}"
         --manifest-path "${RUST_SOURCE_DIR}/Cargo.toml"
     BYPRODUCTS "${RUST_LIBRARY}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
@@ -129,3 +156,15 @@ endif()
 set(NATIVE_INSTALL_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../src/main/resources/META-INF/native"
     CACHE PATH "Root directory for packaged native libraries")
 install(TARGETS zksnarkjni LIBRARY DESTINATION "${NATIVE_INSTALL_ROOT}/${NATIVE_RESOURCE_DIR}")
+if(APPLE)
+    # Installation can change the Mach-O install name, invalidating its signature.
+    install(CODE "
+        execute_process(
+            COMMAND /usr/bin/codesign --force --sign -
+                \"\$ENV{DESTDIR}${NATIVE_INSTALL_ROOT}/${NATIVE_RESOURCE_DIR}/libzksnarkjni.jnilib\"
+            RESULT_VARIABLE codesign_result)
+        if(NOT codesign_result EQUAL 0)
+            message(FATAL_ERROR \"codesign failed with exit code \${codesign_result}\")
+        endif()
+    ")
+endif()
