@@ -32,3 +32,5 @@ target
 cmake-build-debug
 *.iml
 out
+__pycache__/
+downloaded-native/
